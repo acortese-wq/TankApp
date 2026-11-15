@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  cheapest, formatAge, formatDistance, formatPrice, haversineKm, mapsUrl, moneyToNumber,
+  cheapest, formatAge, formatDelta, formatDistance, formatPrice, friendlyError, haversineKm, mapsUrl, moneyToNumber,
   normalizeGooglePlaces, selectStations, sortStations,
 } from '../core.js';
 
@@ -96,4 +96,21 @@ test('Formatierung, Preis-Alter & Maps-Link', () => {
     'https://www.google.com/maps/dir/?api=1&destination=47.1%2C9.2&travelmode=driving&destination_place_id=ChIJabc',
   );
   assert.equal(mapsUrl({ lat: 47.1, lng: 9.2 }), 'https://www.google.com/maps/dir/?api=1&destination=47.1%2C9.2&travelmode=driving');
+});
+
+test('formatDelta: Rappen-Abstand zur günstigsten', () => {
+  assert.equal(formatDelta(1.879, 1.819), '+6 Rp.');
+  assert.equal(formatDelta(1.819, 1.819), null);
+  assert.equal(formatDelta(1.8196, 1.819), null);
+});
+
+test('friendlyError: übersetzt typische Fehler', () => {
+  const p = 'https://x.github.io/TankApp/*';
+  assert.match(friendlyError('HTTP 403: Requests from referer https://evil are blocked.', { pattern: p }), /andere Web-Adresse.*TankApp\/\*/);
+  assert.match(friendlyError('HTTP 400: API key not valid. Please pass a valid API key.'), /ungültig/);
+  assert.match(friendlyError('HTTP 403: Places API (New) has not been used in project 123 before or it is disabled.'), /noch nicht aktiviert/);
+  assert.match(friendlyError('HTTP 403: This API method requires billing to be enabled.'), /Abrechnung/);
+  assert.match(friendlyError('HTTP 429: Quota exceeded'), /Kontingent/);
+  assert.match(friendlyError('Load failed'), /Keine Verbindung/);
+  assert.match(friendlyError('HTTP 500: kaputt'), /Google Maps meldet: HTTP 500/);
 });

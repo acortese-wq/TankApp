@@ -7,7 +7,9 @@ Einmal tippen, in Google Maps landen, losfahren. Keine Werbung, kein Konto, kein
 - Sucht zuerst im Umkreis von **5 km**, erweitert bei Bedarf automatisch auf 10 → 25 → 50 km
 - Sortierung nach Entfernung oder Preis, die **günstigste** ist markiert
 - Ein Tipp auf die Tankstelle startet die Route in **Google Maps** (mit der Place-ID der Tankstelle)
-- Läuft als Web-App (PWA) auf dem iPhone-Homescreen
+- Läuft als Web-App (PWA) auf dem iPhone-Homescreen, im iOS-Look (Hell/Dunkel, Dynamic Type, Bottom Sheet, Pull-to-Refresh)
+- Zeigt beim Start sofort den letzten Stand (auch ohne Netz) und aktualisiert im Hintergrund
+- Verständliche Fehlermeldungen (falscher Key, API nicht aktiviert, Referrer-Beschränkung, kein Netz)
 
 E10 wird in der Schweiz nicht verkauft; Standard ist Bleifrei 95.
 
@@ -40,9 +42,21 @@ Die Standortabfrage funktioniert nur über **HTTPS** oder `localhost`.
 
 ## Aufs iPhone
 
-1. Ordnerinhalt auf einem HTTPS-Hosting bereitstellen (z. B. GitHub Pages, Netlify, Cloudflare Pages – alle Pfade sind relativ).
-2. In Safari öffnen → Teilen → **Zum Home-Bildschirm**.
-3. Beim ersten Start Standortzugriff erlauben und unter ⚙ den Google-Key eintragen.
+Die App wird über **GitHub Pages** ausgeliefert (HTTPS, nötig für den Standort):
+
+`https://acortese-wq.github.io/TankApp/`
+
+1. In Safari öffnen → Teilen → **Zum Home-Bildschirm**.
+2. App vom Homescreen starten, Standort erlauben.
+3. Der Einrichtungsassistent führt durch die Google-Einrichtung (Key erstellen, einfügen, verbinden). Danach ist alles erledigt.
+
+Hinweis: Safari und die Homescreen-App haben **getrennte Speicher**. Den Key also in der Homescreen-App einfügen, nicht in Safari.
+
+## Deployment (GitHub Pages)
+
+`.github/workflows/pages.yml` führt bei jedem Pull Request die Tests aus und veröffentlicht bei jedem Push auf `main` automatisch. Der Cache-Name des Service Workers wird pro Commit gesetzt, Updates kommen so von selbst auf dem iPhone an.
+
+Einmalig im Repository: **Settings → Pages → Source: GitHub Actions**.
 
 ## Aufbau
 

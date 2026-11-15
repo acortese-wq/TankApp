@@ -112,3 +112,29 @@ export function mapsUrl(s) {
   if (s.placeId) params.set('destination_place_id', s.placeId);
   return `https://www.google.com/maps/dir/?${params}`;
 }
+
+// Abstand zur günstigsten Tankstelle in Rappen, z. B. "+6 Rp." (null bei < 1 Rp.)
+export function formatDelta(price, bestPrice) {
+  const rp = Math.round((price - bestPrice) * 100);
+  return rp >= 1 ? `+${rp} Rp.` : null;
+}
+
+// Übersetzt technische API-/Netzwerkfehler in verständliche Hinweise.
+export function friendlyError(message, { pattern = 'deine Web-Adresse' } = {}) {
+  const m = String(message || '');
+  if (/referer|referrer/i.test(m))
+    return `Der Key ist auf eine andere Web-Adresse beschränkt. Erlaube in der Google Cloud Console unter «Websites» das Muster ${pattern}`;
+  if (/API key not valid|API_KEY_INVALID|keyInvalid/i.test(m))
+    return 'Der Key ist ungültig. Bitte prüfe, ob er vollständig kopiert wurde.';
+  if (/API_KEY_SERVICE_BLOCKED|are blocked|API_KEY_API_BLOCKED/i.test(m))
+    return 'Der Key darf diese API nicht nutzen. Erlaube bei den API-Einschränkungen «Places API (New)».';
+  if (/has not been used|is disabled|SERVICE_DISABLED|not been enabled/i.test(m))
+    return 'Die «Places API (New)» ist in diesem Google-Projekt noch nicht aktiviert.';
+  if (/billing|BILLING/i.test(m))
+    return 'Für das Google-Projekt ist die Abrechnung nicht aktiviert (Pflicht für die Places API, es gibt ein Gratiskontingent).';
+  if (/HTTP 429|quota|RESOURCE_EXHAUSTED/i.test(m))
+    return 'Das Google-Kontingent ist aufgebraucht. Bitte später erneut versuchen.';
+  if (/Failed to fetch|NetworkError|Load failed|abort|timeout/i.test(m))
+    return 'Keine Verbindung zu Google Maps. Bitte Internetverbindung prüfen.';
+  return `Google Maps meldet: ${m}`;
+}
