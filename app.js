@@ -2,6 +2,7 @@ import {
   FUELS,
   RADII,
   cheapest,
+  formatAge,
   formatDistance,
   formatPrice,
   mapsUrl,
@@ -13,11 +14,13 @@ import { fetchAll } from './providers.js';
 const STORE_KEY = 'spritfinder.v1';
 const STALE_MS = 5 * 60 * 1000;
 
-const defaults = { fuel: 'e10', sort: 'dist', tankerkoenigKey: '', econtrol: true, demo: false };
+const defaults = { fuel: 'b95', sort: 'dist', googleKey: '', demo: false };
 
 function loadSettings() {
   try {
-    return { ...defaults, ...JSON.parse(localStorage.getItem(STORE_KEY) || '{}') };
+    const s = { ...defaults, ...JSON.parse(localStorage.getItem(STORE_KEY) || '{}') };
+    if (!(s.fuel in FUELS)) s.fuel = defaults.fuel;
+    return s;
   } catch {
     return { ...defaults };
   }
@@ -42,8 +45,7 @@ const els = {
   refresh: $('btn-refresh'),
   settingsBtn: $('btn-settings'),
   dialog: $('settings'),
-  setTk: $('set-tk'),
-  setEc: $('set-ec'),
+  setKey: $('set-key'),
   setDemo: $('set-demo'),
   fuelBtns: [...document.querySelectorAll('#fuel-group button')],
   sortBtns: [...document.querySelectorAll('#sort-group button')],
@@ -109,20 +111,21 @@ function renderList() {
       a.href = mapsUrl(s);
       a.target = '_blank';
       a.rel = 'noopener';
-      a.setAttribute('aria-label', `${s.brand}, ${formatPrice(s.price)} Euro pro Liter, ${formatDistance(s.distKm)} – Route in Google Maps starten`);
+      a.setAttribute('aria-label', `${s.brand}, ${formatPrice(s.price)} Franken pro Liter, ${formatDistance(s.distKm)} – Route in Google Maps starten`);
 
       const main = el('div', 'main');
       const head = el('div', 'brand', s.brand);
       if (isBest) head.append(el('span', 'badge', 'Günstigste'));
       main.append(head);
-      const addr = [s.street, s.place].filter(Boolean).join(', ');
-      if (addr) main.append(el('div', 'addr', addr));
+      if (s.address) main.append(el('div', 'addr', s.address));
+      const age = formatAge(s.updatedAt);
       const meta = [formatDistance(s.distKm)];
-      if (s.fuelLabel && s.fuelLabel !== FUELS[settings.fuel]) meta.push(s.fuelLabel);
+      if (age) meta.push(`Preis ${age}`);
+      if (!s.openKnown) meta.push('Öffnungszeiten unbekannt');
       main.append(el('div', 'meta', meta.join(' · ')));
 
       const priceBox = el('div', 'price');
-      priceBox.append(el('strong', '', formatPrice(s.price)), el('small', '', '€/l'));
+      priceBox.append(el('strong', '', formatPrice(s.price)), el('small', '', 'CHF/l'));
 
       a.append(main, priceBox);
       const li = el('li');
@@ -133,7 +136,7 @@ function renderList() {
 
   const n = r.stations.length;
   const time = r.at.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
-  els.foot.textContent = `${n} geöffnete ${n === 1 ? 'Tankstelle' : 'Tankstellen'} mit ${FUELS[settings.fuel]} im Umkreis von ${r.radiusKm} km · Stand ${time}`;
+  els.foot.textContent = `${n} ${n === 1 ? 'Tankstelle' : 'Tankstellen'} mit ${FUELS[settings.fuel]}-Preis im Umkreis von ${r.radiusKm} km · Stand ${time} · Preise von Google Maps`;
 }
 
 // ---- Standort ------------------------------------------------------------------
@@ -201,9 +204,6 @@ async function search({ relocate = true } = {}) {
         state.lastRunAt = Date.now();
         setStatus('');
         renderList();
-        if (errors.size) {
-          els.foot.textContent += ` · Quelle nicht erreichbar: ${[...errors.keys()].join(', ')}`;
-        }
         return;
       }
     }
@@ -211,14 +211,14 @@ async function search({ relocate = true } = {}) {
     state.result = null;
     renderList();
     if (noSource) {
-      setStatus('Keine Datenquelle aktiv. Hinterlege einen Tankerkönig-Key (DE) oder aktiviere E-Control (AT).', { error: true });
+      setStatus('Für die Preise von Google Maps fehlt der API-Key. Bitte in den Einstellungen hinterlegen.', { error: true });
       setActions([{ label: 'Einstellungen öffnen', onClick: openSettings }]);
     } else if (errors.size) {
       setStatus(`Preise konnten nicht geladen werden (${[...errors].map(([s, m]) => `${s}: ${m}`).join('; ')}).`, { error: true });
       setActions([{ label: 'Erneut versuchen', onClick: () => search({ relocate: false }) }]);
     } else {
       setStatus(
-        `Keine geöffnete Tankstelle mit ${FUELS[settings.fuel]} im Umkreis von ${RADII.at(-1)} km gefunden. Aktuell sind Deutschland (Tankerkönig) und Österreich (E-Control) angebunden.`,
+        `Keine geöffnete Tankstelle mit ${FUELS[settings.fuel]}-Preis im Umkreis von ${RADII.at(-1)} km gefunden. Google zeigt nicht für jede Tankstelle einen Preis an.`,
         { error: true },
       );
       setActions([{ label: 'Erneut versuchen', onClick: () => search() }]);
@@ -239,8 +239,7 @@ async function search({ relocate = true } = {}) {
 
 // ---- Einstellungen / Events ----------------------------------------------------
 function openSettings() {
-  els.setTk.value = settings.tankerkoenigKey;
-  els.setEc.checked = settings.econtrol !== false;
+  els.setKey.value = settings.googleKey;
   els.setDemo.checked = settings.demo;
   els.dialog.showModal();
 }
@@ -248,8 +247,7 @@ function openSettings() {
 els.settingsBtn.addEventListener('click', openSettings);
 els.dialog.addEventListener('close', () => {
   if (els.dialog.returnValue !== 'save') return;
-  settings.tankerkoenigKey = els.setTk.value.trim();
-  settings.econtrol = els.setEc.checked;
+  settings.googleKey = els.setKey.value.trim();
   settings.demo = els.setDemo.checked;
   saveSettings();
   state.cache.clear();

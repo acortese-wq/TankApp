@@ -1,7 +1,14 @@
 // Reine Logik ohne DOM/Netzwerk – testbar mit `node --test`.
 
-export const RADII = [5, 10, 25, 50]; // km, wird der Reihe nach erweitert
-export const FUELS = { e10: 'E10', e5: 'Super E5', diesel: 'Diesel' };
+export const RADII = [5, 10, 25, 50]; // km, wird der Reihe nach erweitert (Places-Maximum: 50 km)
+export const FUELS = { b95: 'Bleifrei 95', b98: 'Bleifrei 98', diesel: 'Diesel' };
+
+// Google Places `fuelOptions.fuelPrices[].type` je Kraftstoff (Reihenfolge = Priorität)
+export const GOOGLE_FUEL_TYPES = {
+  b95: ['SP95', 'REGULAR_UNLEADED'],
+  b98: ['SP98', 'PREMIUM'],
+  diesel: ['DIESEL'],
+};
 
 const EARTH_KM = 6371;
 const rad = (d) => (d * Math.PI) / 180;
@@ -15,72 +22,46 @@ export function haversineKm(lat1, lng1, lat2, lng2) {
   return 2 * EARTH_KM * Math.asin(Math.sqrt(a));
 }
 
-const price = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null);
-const coord = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
-
-function station(base, origin) {
-  const lat = coord(base.lat);
-  const lng = coord(base.lng);
-  if (lat === null || lng === null) return null;
-  return { ...base, lat, lng, distKm: haversineKm(origin.lat, origin.lng, lat, lng) };
+// Google `Money`: { currencyCode, units: "1", nanos: 859000000 }
+export function moneyToNumber(m) {
+  if (!m) return null;
+  const v = Number(m.units || 0) + (m.nanos || 0) / 1e9;
+  return Number.isFinite(v) && v > 0 ? Math.round(v * 1000) / 1000 : null;
 }
 
-// ---- Tankerkönig (DE) -------------------------------------------------------
-// GET /json/list.php?type=all  →  { ok, stations:[{id,name,brand,street,houseNumber,
-//   postCode,place,lat,lng,dist,e5,e10,diesel,isOpen}] }
-export function normalizeTankerkoenig(json, origin, fuel) {
-  if (!json || json.ok !== true) {
-    throw new Error((json && json.message) || 'ungültige Antwort');
-  }
-  return (json.stations || [])
-    .map((s) =>
-      station(
-        {
-          id: `tk:${s.id}`,
-          source: 'Tankerkönig',
-          brand: s.brand || s.name || 'Tankstelle',
-          name: s.name || '',
-          street: [s.street, s.houseNumber].filter(Boolean).join(' '),
-          place: [s.postCode, s.place].filter(Boolean).join(' '),
-          lat: s.lat,
-          lng: s.lng,
-          price: price(s[fuel]),
-          fuelLabel: FUELS[fuel],
-          isOpen: s.isOpen === true,
-        },
-        origin,
-      ),
-    )
-    .filter(Boolean);
-}
+// ---- Google Places API (New): places:searchNearby ---------------------------------
+// FieldMask: places.id,places.displayName,places.formattedAddress,places.shortFormattedAddress,
+//            places.location,places.currentOpeningHours.openNow,places.fuelOptions
+export function normalizeGooglePlaces(json, origin, fuel) {
+  if (!json || typeof json !== 'object') throw new Error('ungültige Antwort');
+  const types = GOOGLE_FUEL_TYPES[fuel];
+  return (json.places || [])
+    .map((p) => {
+      const lat = p.location?.latitude;
+      const lng = p.location?.longitude;
+      if (typeof lat !== 'number' || typeof lng !== 'number') return null;
 
-// ---- E-Control (AT) ---------------------------------------------------------
-// E-Control kennt SUP (Super 95), DIE (Diesel), GAS (Erdgas).
-export const ECONTROL_FUEL = { e10: 'SUP', e5: 'SUP', diesel: 'DIE' };
+      // passende Preise des Kraftstoffs; bei mehreren der aktuellste, sonst nach Priorität
+      const matches = (p.fuelOptions?.fuelPrices || [])
+        .filter((fp) => types.includes(fp.type) && moneyToNumber(fp.price) !== null)
+        .sort((a, b) => (Date.parse(b.updateTime) || 0) - (Date.parse(a.updateTime) || 0) || types.indexOf(a.type) - types.indexOf(b.type));
+      const best = matches[0];
+      const openNow = p.currentOpeningHours?.openNow;
 
-export function normalizeEControl(list, origin, fuel) {
-  if (!Array.isArray(list)) throw new Error('ungültige Antwort');
-  const code = ECONTROL_FUEL[fuel];
-  return list
-    .map((s) => {
-      const loc = s.location || {};
-      const p = (s.prices || []).find((x) => x.fuelType === code);
-      return station(
-        {
-          id: `ec:${s.id}`,
-          source: 'E-Control',
-          brand: s.name || 'Tankstelle',
-          name: s.name || '',
-          street: loc.address || '',
-          place: [loc.postalCode, loc.city].filter(Boolean).join(' '),
-          lat: loc.latitude,
-          lng: loc.longitude,
-          price: price(p && p.amount),
-          fuelLabel: (p && p.label) || (code === 'DIE' ? 'Diesel' : 'Super 95'),
-          isOpen: s.open !== false,
-        },
-        origin,
-      );
+      return {
+        id: `g:${p.id}`,
+        placeId: p.id,
+        source: 'Google Maps',
+        brand: p.displayName?.text || 'Tankstelle',
+        address: p.shortFormattedAddress || p.formattedAddress || '',
+        lat,
+        lng,
+        distKm: haversineKm(origin.lat, origin.lng, lat, lng),
+        price: best ? moneyToNumber(best.price) : null,
+        updatedAt: best?.updateTime ? Date.parse(best.updateTime) || null : null,
+        isOpen: openNow !== false, // unbekannt (undefined) zählt als offen, wird in der Karte vermerkt
+        openKnown: typeof openNow === 'boolean',
+      };
     })
     .filter(Boolean);
 }
@@ -115,7 +96,19 @@ export function formatDistance(km) {
   return `${km.toFixed(1).replace('.', ',')} km`;
 }
 
+export function formatAge(updatedAt, now = Date.now()) {
+  if (!updatedAt) return null;
+  const min = Math.max(0, Math.round((now - updatedAt) / 60000));
+  if (min < 2) return 'gerade eben';
+  if (min < 60) return `vor ${min} Min.`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `vor ${h} Std.`;
+  const d = Math.round(h / 24);
+  return d === 1 ? 'vor 1 Tag' : `vor ${d} Tagen`;
+}
+
 export function mapsUrl(s) {
-  const dest = `${s.lat},${s.lng}`;
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`;
+  const params = new URLSearchParams({ api: '1', destination: `${s.lat},${s.lng}`, travelmode: 'driving' });
+  if (s.placeId) params.set('destination_place_id', s.placeId);
+  return `https://www.google.com/maps/dir/?${params}`;
 }

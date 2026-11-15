@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Spritfinder</title>
-  <meta name="description" content="Nächste offene Tankstelle mit E10 – ein Tipp, und Google Maps navigiert.">
+  <meta name="description" content="Nächste offene Tankstelle in der Schweiz mit aktuellem Preis – ein Tipp, und Google Maps navigiert.">
   <meta name="theme-color" content="#0f1720">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -28,8 +28,8 @@
     </div>
     <div class="controls">
       <div class="seg" role="radiogroup" aria-label="Kraftstoff" id="fuel-group">
-        <button type="button" role="radio" data-fuel="e10">E10</button>
-        <button type="button" role="radio" data-fuel="e5">Super E5</button>
+        <button type="button" role="radio" data-fuel="b95">Bleifrei 95</button>
+        <button type="button" role="radio" data-fuel="b98">Bleifrei 98</button>
         <button type="button" role="radio" data-fuel="diesel">Diesel</button>
       </div>
       <div class="seg" role="radiogroup" aria-label="Sortierung" id="sort-group">
@@ -51,14 +51,9 @@
       <h2>Einstellungen</h2>
 
       <label class="field">
-        <span>Tankerkönig API-Key (Deutschland)</span>
-        <input id="set-tk" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-        <small>Kostenlos auf creativecommons.tankerkoenig.de. Der Key bleibt nur auf diesem Gerät.</small>
-      </label>
-
-      <label class="check">
-        <input id="set-ec" type="checkbox">
-        <span>E-Control nutzen (Österreich, ohne Key)</span>
+        <span>Google-Maps-API-Key</span>
+        <input id="set-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="AIza…">
+        <small>Für «Places API (New)». Der Key bleibt nur auf diesem Gerät. Bitte in der Google Cloud Console auf deine Web-Adresse (HTTP-Referrer) und auf diese API beschränken.</small>
       </label>
 
       <label class="check">

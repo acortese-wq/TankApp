@@ -1,7 +1,7 @@
 {
   "name": "Spritfinder",
   "short_name": "Sprit",
-  "description": "Nächste offene Tankstelle mit E10 – ein Tipp, und Google Maps navigiert.",
+  "description": "Nächste offene Tankstelle in der Schweiz mit aktuellem Preis – ein Tipp, und Google Maps navigiert.",
   "lang": "de",
   "start_url": "./",
   "scope": "./",
