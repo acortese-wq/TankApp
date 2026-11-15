@@ -1,35 +1,19 @@
-# Spritfinder (Schweiz)
+# Aktionen
 
-Einmal tippen, in Google Maps landen, losfahren. Keine Werbung, kein Konto, keine Abhängigkeiten.
+Schneller Einstieg zu den Wochenaktionen bei Coop, Migros, Denner und Co. – als Web-App für den iPhone-Homescreen, im iOS-Look (Hell/Dunkel, Dynamic Type). Keine Werbung, kein Konto, keine Abhängigkeiten.
 
-- Findet den Standort per GPS
-- Zeigt nur **geöffnete** Tankstellen mit dem gewählten Kraftstoff (Bleifrei 95 · Bleifrei 98 · Diesel) und dem aktuellen Preis in CHF – inklusive Alter der Preisangabe
-- Sucht zuerst im Umkreis von **5 km**, erweitert bei Bedarf automatisch auf 10 → 25 → 50 km
-- Sortierung nach Entfernung oder Preis, die **günstigste** ist markiert
-- Ein Tipp auf die Tankstelle startet die Route in **Google Maps** (mit der Place-ID der Tankstelle)
-- Läuft als Web-App (PWA) auf dem iPhone-Homescreen, im iOS-Look (Hell/Dunkel, Dynamic Type, Bottom Sheet, Pull-to-Refresh)
-- Zeigt beim Start sofort den letzten Stand (auch ohne Netz) und aktualisiert im Hintergrund
-- Verständliche Fehlermeldungen (falscher Key, API nicht aktiviert, Referrer-Beschränkung, kein Netz)
+**Wichtig:** Die App ist eine **inoffizielle Verknüpfung** zu [aktionis.ch](https://www.aktionis.ch) (CouponPlus AG). Sie **kopiert keine Inhalte** – alle Angebote, Texte und Bilder bleiben auf aktionis.ch. Laut dessen [Nutzungsbedingungen](https://www.aktionis.ch/terms) braucht die Vervielfältigung von Inhalten die schriftliche Zustimmung der Rechteinhaberin. Deshalb gibt es hier nur Links.
 
-E10 wird in der Schweiz nicht verkauft; Standard ist Bleifrei 95.
+## Funktionen
 
-## Datenquelle: Google Maps
+- **Suche:** Produkt eintippen, Return → Treffer auf aktionis.ch
+- **Aktionen in meiner Nähe:** öffnet aktionis.ch mit Standortfilter
+- **Anbieter:** Coop, Migros, Denner, ALDI Suisse, Lidl, Volg, SPAR, OTTO'S, Coop Megastore
+- **Kategorien:** Backwaren, Bio, Fleisch, Getränke, Kaffee/Tee …
+- **Meine Suchen:** Suchbegriffe mit dem Lesezeichen-Symbol merken (nur auf deinem Gerät), per «Bearbeiten» löschen
+- **Mein Aktionis:** Direktlinks zu Merkliste und Alarm (gehören zu deinem Konto auf aktionis.ch)
 
-Preise, Öffnungsstatus und Preis-Zeitstempel kommen aus der **Places API (New)** (`places:searchNearby`, Feld `fuelOptions`). Das sind dieselben Preise, die Google Maps anzeigt.
-
-Einrichten:
-
-1. In der [Google Cloud Console](https://console.cloud.google.com) ein Projekt anlegen, **Places API (New)** aktivieren, Abrechnung hinterlegen (Google gewährt ein monatliches Gratiskontingent; `fuelOptions` gehört zu einer höheren Preisstufe – Kosten im Blick behalten und ein Budget-Limit setzen).
-2. API-Key erstellen und **beschränken**: Anwendungsbeschränkung *HTTP-Referrer* auf die Adresse, unter der die App liegt, und API-Beschränkung auf *Places API (New)*. Der Key steckt im Browser und ist sonst für jeden einsehbar.
-3. In der App unter ⚙ eintragen. Der Key bleibt im `localStorage` des Geräts.
-
-Grenzen:
-
-- Nearby Search liefert **maximal 20 Treffer**, nach Entfernung sortiert. In dichten Gebieten kann eine Tankstelle mit Preis ausserhalb der 20 nächsten liegen und fehlt dann.
-- Google zeigt nicht für jede Tankstelle einen Preis. Ohne Preis wird eine Station nicht gelistet.
-- Fehlt der Öffnungsstatus, wird die Station gelistet und mit «Öffnungszeiten unbekannt» vermerkt.
-
-Unter ⚙ gibt es ausserdem **Demo-Daten** zum Ausprobieren ohne Key (auch via `?demo`).
+Alle Links öffnen aktionis.ch in einem neuen Tab. Gespeichert werden ausschliesslich deine Suchbegriffe, im `localStorage` des Geräts.
 
 ## Lokal starten
 
@@ -38,19 +22,12 @@ npm start        # http://localhost:8080
 npm test         # Unit-Tests der Logik (node:test, keine Dependencies)
 ```
 
-Die Standortabfrage funktioniert nur über **HTTPS** oder `localhost`.
-
 ## Aufs iPhone
 
-Die App wird über **GitHub Pages** ausgeliefert (HTTPS, nötig für den Standort):
-
-`https://acortese-wq.github.io/TankApp/`
+Die App wird über **GitHub Pages** ausgeliefert: `https://acortese-wq.github.io/TankApp/`
 
 1. In Safari öffnen → Teilen → **Zum Home-Bildschirm**.
-2. App vom Homescreen starten, Standort erlauben.
-3. Der Einrichtungsassistent führt durch die Google-Einrichtung (Key erstellen, einfügen, verbinden). Danach ist alles erledigt.
-
-Hinweis: Safari und die Homescreen-App haben **getrennte Speicher**. Den Key also in der Homescreen-App einfügen, nicht in Safari.
+2. Fertig. Es ist keine Einrichtung nötig.
 
 ## Deployment (GitHub Pages)
 
@@ -58,11 +35,18 @@ Hinweis: Safari und die Homescreen-App haben **getrennte Speicher**. Den Key als
 
 Einmalig im Repository: **Settings → Pages → Source: GitHub Actions**.
 
+## Ausbau mit Zustimmung
+
+Eine eigene Darstellung der Angebote (Preise, Rabatte, Bilder) wäre möglich, sobald die CouponPlus AG einen Feed oder eine Schnittstelle freigibt. Ohne diese Zustimmung bleibt es bei Links.
+
 ## Aufbau
 
 | Datei | Inhalt |
 |---|---|
-| `core.js` | reine Logik: Distanz, Normalisierung der Places-Antwort, Filter, Sortierung, Maps-Link |
-| `providers.js` | Google-Places-Abfrage, Demo-Daten, Cache der Rohdaten |
-| `app.js` | UI, Standort, Radius-Erweiterung, Einstellungen |
-| `sw.js`, `manifest.webmanifest`, `icons/` | PWA-Hülle (nur die App-Dateien werden gecacht, Preise nie) |
+| `core.js` | reine Logik: Link-Bau für aktionis.ch, Anbieter/Kategorien, Verwaltung der eigenen Suchbegriffe |
+| `app.js` | UI und Speicher |
+| `sw.js`, `manifest.webmanifest`, `icons/` | PWA-Hülle (nur die App-Dateien werden gecacht) |
+
+## Verlauf
+
+Aus diesem Repository ging zuvor der «Spritfinder» (Schweizer Tankstellen-Preise über Google Maps) hervor. Er ist in der Git-Historie erhalten (Pull Request #1).

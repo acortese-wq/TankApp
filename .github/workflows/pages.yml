@@ -37,10 +37,10 @@ jobs:
       - name: App-Dateien zusammenstellen
         run: |
           mkdir _site
-          cp index.html styles.css app.js core.js providers.js sw.js manifest.webmanifest _site/
+          cp index.html styles.css app.js core.js sw.js manifest.webmanifest _site/
           cp -r icons _site/icons
           # Cache-Name pro Commit, damit Updates auf dem iPhone ankommen
-          sed -i "s/spritfinder-v[0-9]*/spritfinder-${GITHUB_SHA::7}/" _site/sw.js
+          sed -i "s/aktionen-v[0-9]*/aktionen-${GITHUB_SHA::7}/" _site/sw.js
           grep -n "const CACHE" _site/sw.js
       - uses: actions/upload-pages-artifact@v3
         with:
